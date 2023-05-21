@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" type="string">
+  <tags>
+    <tag language="简体中文" />
+  </tags>
+  <strings>
+    <string id="hatDogUpgradeArmorOrWeapons" text="哥，给我装备升个级呗。" />
+    <string id="hatDogUpgradeChooseArmorOrWeapons" text="妥的，你想升级个啥？" />
+    <string id="hatDogUpgradeChooseLevel" text="你瞅瞅想整成啥样式?" />
+    <string id="hatDogUpgradeRefuse" text="升到头了,整不了了" />
+    <string id="hatDogUpgradePriceResponse" text="好的哥你搝点钱去呗，我估摸着得{UPGRADE_PRICE}{GOLD_ICON}。" />
+    <string id="hatDogUpgradeFailed" text="升级装备模组: 升级失败!!! 请重试。" />
+    <string id="hatDogUpgradeReChooseEquipment" text="我再看看其他装备。" />
+  </strings>
+</base>

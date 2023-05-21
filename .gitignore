@@ -1,0 +1,8 @@
+.vs/
+/bin/*
+/obj/*
+*.csproj
+*.csproj.user
+*.sln
+WorkshopCreate.xml
+WorkshopUpdate.xml
