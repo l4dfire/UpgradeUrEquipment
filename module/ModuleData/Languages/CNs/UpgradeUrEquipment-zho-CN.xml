@@ -13,6 +13,6 @@
     <string id="hatDogUpgradeFailed" text="升级装备模组: 升级失败!!! 请重试。" />
     <string id="hatDogUpgradeReChooseEquipment" text="我再看看其他装备。" />
     <string id="hatDogUpgradeAllEquipment" text="给我来个一条龙。" />
-    <string id="hatDogUpgradeAllEquipmentResp" text="整这么大个活得加钱，我瞅着你得给我{UPGRADE_PRICE}{GOLD_ICON}。" />
+    <string id="hatDogUpgradeAllRefuse" text="可升级装备数小于 3" />
   </strings>
 </base>

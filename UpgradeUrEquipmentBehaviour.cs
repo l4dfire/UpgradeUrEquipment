@@ -16,8 +16,6 @@ namespace UpgradeUrEquipment
     public class UpgradeUrEquipmentBehaviour : CampaignBehaviorBase
     {
 
-        private const double UpgradeAllFactor = 1.2;
-
         private const string SelectedUpgradeAll = "UUE_player_selected_all";
         private const string SelectedUpgradeAllResp = "UUE_player_selected_all_response";
 
@@ -95,7 +93,7 @@ namespace UpgradeUrEquipment
                 "{=!}{COMPANION_NAME}",
                 "{=qOcw1xap}Page Down",
                 SelectedCompanion,
-                new ConversationSentence.OnConditionDelegate(DisplayCompanionName), 
+                new ConversationSentence.OnConditionDelegate(DisplayCompanionName),
                 new ConversationSentence.OnConsequenceDelegate(SelectCompanion));
             //玩家选自己
             _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_0_2",
@@ -103,7 +101,8 @@ namespace UpgradeUrEquipment
                 NeedToUpgradeEquipment,
                 "{=3VxA6HaZ}This is for me.",
                 null,
-                new ConversationSentence.OnConsequenceDelegate(() => { 
+                new ConversationSentence.OnConsequenceDelegate(() =>
+                {
                     selectedHero = Hero.MainHero;
                     LoadEquipmentOptions();
                 }));
@@ -129,11 +128,11 @@ namespace UpgradeUrEquipment
             //重选同伴
             _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_1_2", NeedToUpgradeEquipmentResp, SelectedCompanion, "{=ElG1LnCA}I am thinking of someone else.", null,
                 new ConversationSentence.OnConsequenceDelegate(InitializeCompanionOptions)); //重新准备同伴数据
-             //不选装备了
+                                                                                             //不选装备了
             _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_1_3", NeedToUpgradeEquipmentResp, SelectedCancel, "{=8hNYr2VX}I was just passing by.", null, null);
 
             //老板要求选择等级
-             _ = campaignGameStarter.AddDialogLine("hatDogUprgadeEquipment_2", SelectedEquipment, SelectedEquipmentResp, "{=hatDogUpgradeChooseLevel}Yes, of course. What equipment modifier do you need?", null, null);
+            _ = campaignGameStarter.AddDialogLine("hatDogUprgadeEquipment_2", SelectedEquipment, SelectedEquipmentResp, "{=hatDogUpgradeChooseLevel}Yes, of course. What equipment modifier do you need?", null, null);
 
             //可选择等级选项
             _ = campaignGameStarter.AddRepeatablePlayerLine("hatDogUprgadeEquipment_2_1",
@@ -167,23 +166,24 @@ namespace UpgradeUrEquipment
             //放弃升级统一出口
             _ = campaignGameStarter.AddDialogLine("hatDogUprgadeEquipmentCancel", SelectedCancel, "close_window", "{=FpNWdIaT}Yes, of course. Just ask me if there is anything you need.", null, null);
 
-            //2023-07-07 更新
-            //选择人物后直接升级一整套
-            _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_1_4", NeedToUpgradeEquipmentResp, SelectedUpgradeAll, "{=hatDogUpgradeAllEquipment}Upgrade all equipment to the best", null, new ConversationSentence.OnConsequenceDelegate(PlayerChooseUpgradeAll));
+            //2023-07-15 更新:选择人物后直接升级一整套
+            _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_X_1", NeedToUpgradeEquipmentResp, SelectedUpgradeAll, "{=hatDogUpgradeAllEquipment}Upgrade all equipment to the best", null, new ConversationSentence.OnConsequenceDelegate(PlayerChooseUpgradeAll),
+                clickableConditionDelegate: new ConversationSentence.OnClickableConditionDelegate(CanUpgradeAll), //可以升级装备需要 >= 3
+                priority:110);
 
-            //选择升级全部报价
-            _ = campaignGameStarter.AddDialogLine("hatDogUprgadeEquipment_4", SelectedUpgradeAll, SelectedUpgradeAllResp, "{=hatDogUpgradeAllEquipmentResp}If you are willing to spend more money, I can upgrade all equipment for you at once. You will need to pay {UPGRADE_PRICE}{GOLD_ICON} this time.", null, null);
+            //2023-07-15 更新:选择升级全部报价
+            _ = campaignGameStarter.AddDialogLine("hatDogUprgadeEquipment_X_2", SelectedUpgradeAll, SelectedUpgradeAllResp, "{=hatDogUpgradePriceResponse}ok, that should cost around {UPGRADE_PRICE}{GOLD_ICON}", null, null, priority: 110);
 
-            //接收全部升级报价
-            _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_4_1", SelectedUpgradeAllResp, "close_window", "{=oHaWR73d}OK",
+            //2023-07-15 更新:接收全部升级报价
+            _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_X_3", SelectedUpgradeAllResp, "close_window", "{=oHaWR73d}OK",
                 null,
                 new ConversationSentence.OnConsequenceDelegate(AcceptUpgradeAllEquipment), //同意之后替换装备并扣钱
-                clickableConditionDelegate: new ConversationSentence.OnClickableConditionDelegate(CheckIfPlayerHasEnoughMoney)); //钱不够不让点
+                clickableConditionDelegate: new ConversationSentence.OnClickableConditionDelegate(CheckIfPlayerHasEnoughMoney), //钱不够不让点
+                priority: 110); 
 
-            //不接收全部升级报价
-            _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_4_2", SelectedUpgradeAllResp, "close_window", "{=8hNYr2VX}I was just passing by.",
-                null,
-                null);
+            //2023-07-15 更新:不接收全部升级报价
+            _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_X_4", SelectedUpgradeAllResp, "close_window", "{=8hNYr2VX}I was just passing by.",
+                null,null, priority: 110);
         }
 
         //出现加强装备选项判断
@@ -202,7 +202,13 @@ namespace UpgradeUrEquipment
         private List<Hero> LoadCompanions() => PartyBase.MainParty.MemberRoster.GetTroopRoster()
             .Where(m => m.Character.IsHero && m.Character.HeroObject.Clan == Clan.PlayerClan && !m.Character.HeroObject.IsHumanPlayerCharacter)
             .Select(t => t.Character.HeroObject)
+            .Where(h => 
+                Enumerable.Range(0, Equipment.EquipmentSlotLength)
+                    .SelectMany(i => new[] { h.BattleEquipment[i], h.CivilianEquipment[i] })
+                    .Any(e => !LoadItemModifiers(e).IsEmpty())
+            )
             .ToList();
+
 
         //同伴选项渲染
         private bool DisplayCompanionName()
@@ -387,7 +393,7 @@ namespace UpgradeUrEquipment
             {
                 return 0;
             }
-            return (int)(CalculateUpgradePrice(equipmentElement, equipmentModifier[0]) * UpgradeAllFactor);
+            return CalculateUpgradePrice(equipmentElement, equipmentModifier[0]);
         }
 
         // 计算装备升级价格
@@ -414,7 +420,31 @@ namespace UpgradeUrEquipment
             int basePrice = equipment.Item.Value;
             // 计算升级价格
             int upgradePrice = (int)(basePrice * priceDifference);
-            return upgradePrice * 5;
+            //2023-07-15: 高级装备需要更贵的价格，低级装备升级更便宜
+            return upgradePrice * (int)(equipment.Item.Tier + 1);
+        }
+
+        //检查可以升级的装备总数是否 >= 3
+        private bool CanUpgradeAll(out TextObject target)
+        {
+            if (selectedHero == null)
+            {
+                target = TextObject.Empty;
+                return false;
+            }
+            int cnt = 0;
+            for (int i = 0; i < Equipment.EquipmentSlotLength && cnt < 3; i++)
+            {
+                if(!LoadItemModifiers(selectedHero.BattleEquipment[i]).IsEmpty()) { cnt++; }
+                if (!LoadItemModifiers(selectedHero.CivilianEquipment[i]).IsEmpty()) { cnt++; }
+            }
+            if (cnt < 3)
+            {
+                target = new TextObject("{=hatDogUpgradeAllRefuse} The number of upgradable equipment is less than 3.");
+                return false;
+            }
+            target = TextObject.Empty;
+            return true;
         }
 
         //最后一个判断: 是否可以升级
@@ -468,9 +498,13 @@ namespace UpgradeUrEquipment
         //点击升级，扣钱并升级全部装备
         private void AcceptUpgradeAllEquipment()
         {
-            if (selectedHero == null || selectedUpgradeItemPrice == 0)
+            if (selectedHero == null)
             {
                 DisplayErrorMessage();
+                return;
+            }
+            if (selectedUpgradeItemPrice == 0)
+            {
                 return;
             }
             for (int i = 0; i < Equipment.EquipmentSlotLength; i++)
@@ -483,16 +517,16 @@ namespace UpgradeUrEquipment
 
         private EquipmentElement GetMaxUpgradedEquipment(EquipmentElement equipmentElement)
         {
-            if(!CanAddEquipmentModifier(equipmentElement.Item))
+            if (!CanAddEquipmentModifier(equipmentElement.Item))
             {
                 return equipmentElement;
             }
-            List<ItemModifier> battleEquipmentModifier = LoadItemModifiers(equipmentElement);
-            if (battleEquipmentModifier.IsEmpty())
+            List<ItemModifier> equipmentModifier = LoadItemModifiers(equipmentElement);
+            if (equipmentModifier.IsEmpty())
             {
                 return equipmentElement;
             }
-            return new EquipmentElement(equipmentElement.Item, battleEquipmentModifier[0]);
+            return new EquipmentElement(equipmentElement.Item, equipmentModifier[0]);
         }
 
         private bool CanAddEquipmentModifier(ItemObject item)
@@ -502,7 +536,7 @@ namespace UpgradeUrEquipment
 
         private bool IsAdditionalSupportArmor(ItemObject item)
         {
-            return  item.ItemType == ItemTypeEnum.HorseHarness;
+            return item.ItemType == ItemTypeEnum.HorseHarness;
         }
 
         private bool IsAdditionalSupportWeapon(ItemObject item)
