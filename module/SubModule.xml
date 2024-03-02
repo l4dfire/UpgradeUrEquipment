@@ -2,7 +2,7 @@
 <Module>
 	<Name value="Upgrade Your Equipment"/>
 	<Id value="UpgradeUrEquipment"/>
-	<Version value="v1.0.7"/>
+	<Version value="v1.0.9"/>
 	<SingleplayerModule value="true"/>
 	<MultiplayerModule value="false"/>
 	<DependedModules>

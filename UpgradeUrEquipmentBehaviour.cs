@@ -138,7 +138,7 @@ namespace UpgradeUrEquipment
             _ = campaignGameStarter.AddRepeatablePlayerLine("hatDogUprgadeEquipment_2_1",
                 SelectedEquipmentResp,
                 SelectedEquipmentModifier,
-                "{=!}{ItemModifierName}",
+                "{=!}{ItemModifierName},{GOLD_ICON}{GoldNum}",
                 "{=qOcw1xap}Page Down",
                 SelectedEquipment,
                 new ConversationSentence.OnConditionDelegate(RenderItemModifierName), //获取前缀名填到选项
@@ -169,7 +169,7 @@ namespace UpgradeUrEquipment
             //2023-07-15 更新:选择人物后直接升级一整套
             _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_X_1", NeedToUpgradeEquipmentResp, SelectedUpgradeAll, "{=hatDogUpgradeAllEquipment}Upgrade all equipment to the best", null, new ConversationSentence.OnConsequenceDelegate(PlayerChooseUpgradeAll),
                 clickableConditionDelegate: new ConversationSentence.OnClickableConditionDelegate(CanUpgradeAll), //可以升级装备需要 >= 3
-                priority:110);
+                priority: 110);
 
             //2023-07-15 更新:选择升级全部报价
             _ = campaignGameStarter.AddDialogLine("hatDogUprgadeEquipment_X_2", SelectedUpgradeAll, SelectedUpgradeAllResp, "{=hatDogUpgradePriceResponse}ok, that should cost around {UPGRADE_PRICE}{GOLD_ICON}", null, null, priority: 110);
@@ -179,11 +179,11 @@ namespace UpgradeUrEquipment
                 null,
                 new ConversationSentence.OnConsequenceDelegate(AcceptUpgradeAllEquipment), //同意之后替换装备并扣钱
                 clickableConditionDelegate: new ConversationSentence.OnClickableConditionDelegate(CheckIfPlayerHasEnoughMoney), //钱不够不让点
-                priority: 110); 
+                priority: 110);
 
             //2023-07-15 更新:不接收全部升级报价
             _ = campaignGameStarter.AddPlayerLine("hatDogUprgadeEquipment_X_4", SelectedUpgradeAllResp, "close_window", "{=8hNYr2VX}I was just passing by.",
-                null,null, priority: 110);
+                null, null, priority: 110);
         }
 
         //出现加强装备选项判断
@@ -202,7 +202,7 @@ namespace UpgradeUrEquipment
         private List<Hero> LoadCompanions() => PartyBase.MainParty.MemberRoster.GetTroopRoster()
             .Where(m => m.Character.IsHero && m.Character.HeroObject.Clan == Clan.PlayerClan && !m.Character.HeroObject.IsHumanPlayerCharacter)
             .Select(t => t.Character.HeroObject)
-            .Where(h => 
+            .Where(h =>
                 Enumerable.Range(0, Equipment.EquipmentSlotLength)
                     .SelectMany(i => new[] { h.BattleEquipment[i], h.CivilianEquipment[i] })
                     .Any(e => !LoadItemModifiers(e).IsEmpty())
@@ -322,20 +322,21 @@ namespace UpgradeUrEquipment
         {
             List<ItemModifier> itemModifiers = new List<ItemModifier>();
             ItemModifier currentItemModifier = item.ItemModifier;
-            float priceMultiplier = currentItemModifier?.PriceMultiplier ?? 1;
+            float priceMultiplier = CompatibleWithFineArrow(currentItemModifier, item.Item);
             float prePriceMultiplier = priceMultiplier;
 
             foreach (ItemModifier itemModifier in prefabItemModifiers)
             {
-                if (itemModifier.PriceMultiplier > priceMultiplier)
+                float fixedPriceMultiplier = CompatibleWithFineArrow(itemModifier, item.Item);
+                if (fixedPriceMultiplier > priceMultiplier)
                 {
-                    if (itemModifier.PriceMultiplier < 1 && prePriceMultiplier > 1 && priceMultiplier < 1)
+                    if (fixedPriceMultiplier < 1 && prePriceMultiplier > 1 && priceMultiplier < 1)
                     {
                         itemModifiers.Add(defaultItemModifier);
                     }
                     itemModifiers.Add(itemModifier);
                 }
-                prePriceMultiplier = itemModifier.PriceMultiplier;
+                prePriceMultiplier = fixedPriceMultiplier;
             }
             return itemModifiers;
         }
@@ -351,6 +352,8 @@ namespace UpgradeUrEquipment
             _ = processedRepeatObject == defaultItemModifier ?
                 ConversationSentence.SelectedRepeatLine.SetTextVariable("ItemModifierName", new TextObject("{=8UBfIenN}Normal").ToString() + " " + selectedUpgradeEquipment.Item1.Item.Name.ToString()) :
                 ConversationSentence.SelectedRepeatLine.SetTextVariable("ItemModifierName", processedRepeatObject.Name.SetTextVariable("ITEMNAME", selectedUpgradeEquipment.Item1.Item.Name));
+            //😅，忘记哪天加的了，总之是给列表页加上展示金额
+            ConversationSentence.SelectedRepeatLine.SetTextVariable("GoldNum", Math.Max(0, CalculateUpgradePrice(selectedUpgradeEquipment.Item1, processedRepeatObject)));
             return true;
         }
 
@@ -406,22 +409,19 @@ namespace UpgradeUrEquipment
             }
             // 获取当前装备的属性和价格乘数
             ItemModifier currentModifier = equipment.ItemModifier;
-            float currentPriceMultiplier = currentModifier?.PriceMultiplier ?? 1f;
+            float currentPriceMultiplier = CompatibleWithFineArrow(currentModifier, equipment.Item);
             // 获取目标属性和价格乘数
-            float targetPriceMultiplier = targetModifier?.PriceMultiplier ?? 1f;
-            // 如果目标属性为默认属性，则价格乘数为1
-            if (targetModifier == defaultItemModifier)
-            {
-                targetPriceMultiplier = 1f;
-            }
+            float targetPriceMultiplier = CompatibleWithFineArrow(targetModifier, equipment.Item);
+
             // 计算价格差异
             float priceDifference = targetPriceMultiplier - currentPriceMultiplier;
             // 获取装备基础价格
-            int basePrice = equipment.Item.Value;
+            int basePrice = equipment.ItemValue;
             // 计算升级价格
             int upgradePrice = (int)(basePrice * priceDifference);
             //2023-07-15: 高级装备需要更贵的价格，低级装备升级更便宜
-            return upgradePrice * (int)(equipment.Item.Tier + 1);
+            //2024-03-02: 修复 tier 负 1 导致的 0 价问题
+            return upgradePrice * (int)((equipment.Item.Tier < 0 ? 0 : equipment.Item.Tier) + 1);
         }
 
         //检查可以升级的装备总数是否 >= 3
@@ -435,7 +435,7 @@ namespace UpgradeUrEquipment
             int cnt = 0;
             for (int i = 0; i < Equipment.EquipmentSlotLength && cnt < 3; i++)
             {
-                if(!LoadItemModifiers(selectedHero.BattleEquipment[i]).IsEmpty()) { cnt++; }
+                if (!LoadItemModifiers(selectedHero.BattleEquipment[i]).IsEmpty()) { cnt++; }
                 if (!LoadItemModifiers(selectedHero.CivilianEquipment[i]).IsEmpty()) { cnt++; }
             }
             if (cnt < 3)
@@ -462,9 +462,9 @@ namespace UpgradeUrEquipment
         //点击升级，扣钱并升级装备
         private void AcceptUpgradeEquipment()
         {
-            if (selectedUpgradeEquipment == null || selectedUpgradeItemModifier == null || selectedUpgradeItemPrice == 0)
+            if (selectedUpgradeEquipment == null || selectedUpgradeItemModifier == null)
             {
-                DisplayErrorMessage();
+                DisplayErrorMessage("Equipment");
                 return;
             }
             if (selectedUpgradeEquipment.Item2)
@@ -473,7 +473,7 @@ namespace UpgradeUrEquipment
                 selectedHero.CivilianEquipment[selectedUpgradeEquipment.Item3] = newEquipmentElement;
                 if (selectedHero.CivilianEquipment[selectedUpgradeEquipment.Item3].ItemModifier == null && selectedUpgradeItemModifier != defaultItemModifier)
                 {
-                    DisplayErrorMessage();
+                    DisplayErrorMessage("HeroEquipmentCivilian");
                     return;
                 }
             }
@@ -483,16 +483,16 @@ namespace UpgradeUrEquipment
                 selectedHero.BattleEquipment[selectedUpgradeEquipment.Item3] = newEquipmentElement;
                 if (selectedHero.BattleEquipment[selectedUpgradeEquipment.Item3].ItemModifier == null && selectedUpgradeItemModifier != defaultItemModifier)
                 {
-                    DisplayErrorMessage();
+                    DisplayErrorMessage("HeroEquipmentBattle");
                     return;
                 }
             }
             GiveGoldAction.ApplyForCharacterToSettlement(Hero.MainHero, Settlement.CurrentSettlement, selectedUpgradeItemPrice);
         }
 
-        private void DisplayErrorMessage()
+        private void DisplayErrorMessage(string msg)
         {
-            InformationManager.DisplayMessage(new InformationMessage(new TextObject("{=hatDogUpgradeFailed}Upgrade Ur Equipment:failed!!!!! plz try again").ToString(), new Color(1, 0, 0)));
+            InformationManager.DisplayMessage(new InformationMessage(new TextObject("Upgrade Ur Equipment:" + msg + "!!!!!").ToString(), new Color(1, 0, 0)));
         }
 
         //点击升级，扣钱并升级全部装备
@@ -500,11 +500,7 @@ namespace UpgradeUrEquipment
         {
             if (selectedHero == null)
             {
-                DisplayErrorMessage();
-                return;
-            }
-            if (selectedUpgradeItemPrice == 0)
-            {
+                DisplayErrorMessage("error type: Hero");
                 return;
             }
             for (int i = 0; i < Equipment.EquipmentSlotLength; i++)
@@ -550,6 +546,19 @@ namespace UpgradeUrEquipment
                     || item.ItemType == ItemTypeEnum.Bow
                     || item.ItemType == ItemTypeEnum.Crossbow
                     || item.ItemType == ItemTypeEnum.Thrown;
+        }
+
+        //处理下 item_modifiers.xml 中 Arrows 配置的一大袋比传奇贵的问题
+        //找不到太好的方式，我不想维护一个 xml 覆盖原版的，这样会导致玩家的修改不可用。同时我得关注每次更新来同步更新 xml
+        //所以最后选择在代码里动态改把
+        private float CompatibleWithFineArrow(ItemModifier itemModifier, ItemObject item)
+        {
+            const float ArrowFineModifierFactor = 1.4f;
+            if (itemModifier == null || item == null)
+            {
+                return 1f;
+            }
+            return itemModifier.ItemQuality == ItemQuality.Fine && item.ItemType == ItemTypeEnum.Arrows ? ArrowFineModifierFactor : itemModifier.PriceMultiplier;
         }
 
     }
