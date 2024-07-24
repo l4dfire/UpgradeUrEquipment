@@ -1,5 +1,7 @@
 .vs/
 /bin/*
 /obj/*
+.vscode/
 WorkshopCreate.xml
 WorkshopUpdate.xml
+steam_workshop_uploader.txt

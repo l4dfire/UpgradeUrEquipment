@@ -6,4 +6,10 @@
     <StartWorkingDirectory>E:\SteamLibrary\steamapps\common\Mount &amp; Blade II Bannerlord\bin\Win64_Shipping_Client\</StartWorkingDirectory>
     <StartArguments>/singleplayer _MODULES_%2aNative%2aSandBoxCore%2aCustomBattle%2aSandBox%2aStoryMode%2aHatDogModule%2aUpgradeUrEquipmentAtTheBlacksmithShop%2a_MODULES_</StartArguments>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <StartAction>Program</StartAction>
+    <StartProgram>D:\Program Files\Steam\steamapps\common\Mount &amp; Blade II Bannerlord\bin\Win64_Shipping_Client\Bannerlord.exe</StartProgram>
+    <StartArguments>/singleplayer _MODULES_%2aNative%2aSandBoxCore%2aCustomBattle%2aSandBox%2aStoryMode%2aUpgradeUrEquipment%2a_MODULES_</StartArguments>
+    <StartWorkingDirectory>D:\Program Files\Steam\steamapps\common\Mount &amp; Blade II Bannerlord\bin\Win64_Shipping_Client</StartWorkingDirectory>
+  </PropertyGroup>
 </Project>

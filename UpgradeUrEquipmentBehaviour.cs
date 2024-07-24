@@ -15,7 +15,6 @@ namespace UpgradeUrEquipment
 {
     public class UpgradeUrEquipmentBehaviour : CampaignBehaviorBase
     {
-
         private const string SelectedUpgradeAll = "UUE_player_selected_all";
         private const string SelectedUpgradeAllResp = "UUE_player_selected_all_response";
 
@@ -261,7 +260,15 @@ namespace UpgradeUrEquipment
             {
                 return false;
             }
-            ConversationSentence.SelectedRepeatLine.SetTextVariable("EquipmentName", processedRepeatObject.Item1.Item.Name);
+            //2024-06-29 bug fix, 我也不知道当时咋想的，而且这么久没报错。
+            if (processedRepeatObject.Item1.ItemModifier != null)
+            {
+                ConversationSentence.SelectedRepeatLine.SetTextVariable("EquipmentName", processedRepeatObject.Item1.ItemModifier.Name.ToString() + " " + processedRepeatObject.Item1.Item.Name);
+            }
+            else
+            {
+                ConversationSentence.SelectedRepeatLine.SetTextVariable("EquipmentName", new TextObject("{=8UBfIenN}Normal").ToString() + " " + processedRepeatObject.Item1.Item.Name);
+            }
             return true;
         }
 
@@ -301,21 +308,29 @@ namespace UpgradeUrEquipment
             }
             if (item.Item.ItemComponent.ItemModifierGroup == null)
             {
-                return LoadPrefabModifiers(item, GetAdditionalModifier(item.Item.ItemType));
+                return LoadPrefabModifiers(item, GetAdditionalModifier(item.Item));
             }
             return LoadPrefabModifiers(item, item.Item.ItemComponent.ItemModifierGroup.ItemModifiers);
         }
 
-        private List<ItemModifier> GetAdditionalModifier(ItemTypeEnum itemType)
+        private List<ItemModifier> GetAdditionalModifier(ItemObject itemObject)
         {
-            if (!additionalTypeMappingGroupName.ContainsKey(itemType))
+            if (!additionalTypeMappingGroupName.ContainsKey(itemObject.ItemType))
             {
                 return Enumerable.Empty<ItemModifier>().ToList();
             }
+            //2024/07/24 打造武器兼容
+            foreach (CraftingTemplate craftingTemplate in (List<CraftingTemplate>)CraftingTemplate.All)
+            {
+                if (itemObject.WeaponDesign != null && craftingTemplate == itemObject.WeaponDesign.Template)
+                {
+                    return craftingTemplate.ItemModifierGroup.ItemModifiers.ToList();
+                }
+            }
             return Campaign.Current.ItemModifierGroups
-                .Where(itemModifierGroup => itemModifierGroup.StringId == additionalTypeMappingGroupName[itemType])
-                .SelectMany(itemModifierGroup => itemModifierGroup.ItemModifiers)
-                .ToList();
+            .Where(itemModifierGroup => itemModifierGroup.StringId == additionalTypeMappingGroupName[itemObject.ItemType])
+            .SelectMany(itemModifierGroup => itemModifierGroup.ItemModifiers)
+            .ToList();
         }
 
         private List<ItemModifier> LoadPrefabModifiers(EquipmentElement item, List<ItemModifier> prefabItemModifiers)
@@ -414,7 +429,8 @@ namespace UpgradeUrEquipment
             float targetPriceMultiplier = CompatibleWithFineArrow(targetModifier, equipment.Item);
 
             // 计算价格差异
-            float priceDifference = targetPriceMultiplier - currentPriceMultiplier;
+            // 2024-07-17， 调价： 让低级前缀升级到普通更便宜，并且整体微略降价
+            float priceDifference = CalculatePriceDifference(currentPriceMultiplier, targetPriceMultiplier);
             // 获取装备基础价格
             int basePrice = equipment.ItemValue;
             // 计算升级价格
@@ -422,6 +438,20 @@ namespace UpgradeUrEquipment
             //2023-07-15: 高级装备需要更贵的价格，低级装备升级更便宜
             //2024-03-02: 修复 tier 负 1 导致的 0 价问题
             return upgradePrice * (int)((equipment.Item.Tier < 0 ? 0 : equipment.Item.Tier) + 1);
+        }
+
+        // 计算价格差异的函数，使用二次函数平滑价格曲线
+        private float CalculatePriceDifference(float currentMultiplier, float targetMultiplier)
+        {
+            // 使用二次函数来平滑价格曲线
+            float factor = 0.13f; // 二次项系数，可以根据需要调整
+
+            // 计算当前和目标乘数的二次函数值
+            float currentValue = factor * currentMultiplier * currentMultiplier * currentMultiplier + factor * currentMultiplier * currentMultiplier;
+            float targetValue = factor * targetMultiplier * targetMultiplier * targetMultiplier + factor * targetMultiplier * targetMultiplier;
+
+            // 返回价格差异
+            return targetValue - currentValue;
         }
 
         //检查可以升级的装备总数是否 >= 3
@@ -527,7 +557,8 @@ namespace UpgradeUrEquipment
 
         private bool CanAddEquipmentModifier(ItemObject item)
         {
-            return item != null && item.ItemComponent != null && (item.ItemComponent.ItemModifierGroup != null || IsAdditionalSupportWeapon(item) || IsAdditionalSupportArmor(item));
+            return item != null && item.ItemComponent != null && item.ItemType != ItemTypeEnum.Horse
+                && (item.ItemComponent.ItemModifierGroup != null || (IsAdditionalSupportWeapon(item) || IsAdditionalSupportArmor(item)));
         }
 
         private bool IsAdditionalSupportArmor(ItemObject item)
@@ -554,7 +585,7 @@ namespace UpgradeUrEquipment
         private float CompatibleWithFineArrow(ItemModifier itemModifier, ItemObject item)
         {
             const float ArrowFineModifierFactor = 1.4f;
-            if (itemModifier == null || item == null)
+            if (itemModifier == null || item == null || itemModifier.PriceMultiplier == 0)
             {
                 return 1f;
             }
