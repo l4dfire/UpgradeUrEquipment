@@ -71,7 +71,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlacksmithWorkingOvertimeBehaviour.cs" />
+    <Compile Include="BlacksmithNightInTavernBehaviour.cs" />
     <Compile Include="UpgradeUrEquipmentBehaviour.cs" />
     <Compile Include="UpgradeUrEquipment.cs" />
   </ItemGroup>

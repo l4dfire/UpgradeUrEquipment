@@ -7,12 +7,12 @@ namespace UpgradeUrEquipment
     public class UpgradeUrEquipmentSubModule : MBSubModuleBase
     {
         private readonly UpgradeUrEquipmentBehaviour upgradeUrEquipmentBehaviour;
-        private readonly BlacksmithWorkingOvertimeBehaviour blacksmithWorkingOvertimeBehaviour;
+        private readonly BlacksmithNightInTavernBehaviour blacksmithNightInTavernBehaviour;
 
         public UpgradeUrEquipmentSubModule()
         {
             upgradeUrEquipmentBehaviour = new UpgradeUrEquipmentBehaviour();
-            blacksmithWorkingOvertimeBehaviour = new BlacksmithWorkingOvertimeBehaviour();
+            blacksmithNightInTavernBehaviour = new BlacksmithNightInTavernBehaviour();
         }
 
         protected override void InitializeGameStarter(Game game, IGameStarter gameStarterObject)
@@ -22,7 +22,7 @@ namespace UpgradeUrEquipment
             if (!(gameStarterObject is CampaignGameStarter campaignGameStarter))
                 return;
             campaignGameStarter.AddBehavior(upgradeUrEquipmentBehaviour);
-            campaignGameStarter.AddBehavior(blacksmithWorkingOvertimeBehaviour);
+            campaignGameStarter.AddBehavior(blacksmithNightInTavernBehaviour);
         }
     }
 }

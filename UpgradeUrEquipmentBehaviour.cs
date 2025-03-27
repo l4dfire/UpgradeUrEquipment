@@ -432,7 +432,8 @@ namespace UpgradeUrEquipment
             // 2024-07-17， 调价： 让低级前缀升级到普通更便宜，并且整体微略降价
             float priceDifference = CalculatePriceDifference(currentPriceMultiplier, targetPriceMultiplier);
             // 获取装备基础价格
-            int basePrice = equipment.ItemValue;
+            // 2025-02-17 使用空前缀获取价格
+            int basePrice = new EquipmentElement(equipment.Item, null).ItemValue;
             // 计算升级价格
             int upgradePrice = (int)(basePrice * priceDifference);
             //2023-07-15: 高级装备需要更贵的价格，低级装备升级更便宜
